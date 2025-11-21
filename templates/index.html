@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Boolean Holant Gadget Calculator</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root {
+            --bg-color: #0b0e14;
+            --panel-bg: rgba(20, 24, 34, 0.9);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+
+        * { box-sizing: border-box; outline: none; user-select: none; }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+            color: var(--text-primary);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+            height: 50px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            flex-grow: 1;
+            height: calc(100vh - 50px);
+            overflow: hidden;
+        }
+
+        .column {
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            gap: 15px;
+            overflow-y: auto;
+            z-index: 5;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Inputs & Buttons */
+        input, textarea, select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+        input:focus, textarea:focus, select:focus { border-color: var(--accent-color); }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-success { background: var(--success-color); color: white; }
+        .btn-success:hover { filter: brightness(1.1); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger-color); border: 1px solid var(--danger-color); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
+        .btn-warning { background: var(--warning-color); color: #1e293b; }
+        .btn-warning:hover { filter: brightness(1.1); }
+        
+        .btn-icon { width: auto; padding: 4px 8px; font-size: 0.7rem; background: rgba(255,255,255,0.1); color: var(--text-secondary); }
+        .btn-icon:hover { background: rgba(255,255,255,0.2); color: white; }
+
+        /* Canvas */
+        .graph-area {
+            flex-grow: 1;
+            position: relative;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0f1115;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+            overflow: hidden;
+        }
+        
+        .toolbar-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 20;
+        }
+
+        /* Selection Box */
+        #selectionBox {
+            position: absolute;
+            border: 1px dashed var(--accent-color);
+            background: rgba(59, 130, 246, 0.1);
+            display: none;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        /* Library Items */
+        .lib-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+        .lib-item:hover { background: rgba(255,255,255,0.08); border-color: var(--accent-color); }
+        .lib-actions { opacity: 0; transition: 0.2s; display:flex; gap:5px;}
+        .lib-item:hover .lib-actions { opacity: 1; }
+
+        /* Matrix Grid */
+        .matrix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
+        .matrix-input { text-align: center; }
+
+        /* Result Box */
+        .result-box {
+            background: rgba(0,0,0,0.5);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: #a5f3fc;
+            white-space: pre-wrap;
+            min-height: 60px;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Boolean Holant Gadget Calculator</h1>
+    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+        Shift+Click/Drag to Select Multiple • Right-Click to Delete
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <!-- LEFT: Selection & Edit -->
+    <div class="column">
+        <!-- 1. Add Node Panel -->
+        <div class="card">
+            <div class="card-title">Create Vertex</div>
+            <div style="display:flex; gap:8px;">
+                <div style="flex:1">
+                    <label style="font-size:0.7rem; color:#64748b">Name</label>
+                    <input type="text" id="newNodeName" value="f">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:0.7rem; color:#64748b">Arity</label>
+                    <input type="number" id="newNodeArity" value="3" min="1" max="8">
+                </div>
+            </div>
+            <button class="btn-primary" onclick="addNode()">+ Add to Graph</button>
+        </div>
+
+        <!-- 2. Selection Action Panel -->
+        <div class="card" id="selectionPanel" style="display:none;">
+            <div class="card-title">
+                Selection (<span id="selectionCount">0</span>)
+            </div>
+            
+            <!-- Multi-Select Actions -->
+            <div id="multiActions" style="display:none;">
+                <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:8px;">
+                    Selected multiple vertices. You can merge them into a new gadget function.
+                </div>
+                <button class="btn-warning" onclick="mergeSelection()">
+                    <span style="font-size:1rem">⚗️</span> Merge Selected
+                </button>
+                <button class="btn-danger" style="margin-top:5px;" onclick="deleteSelection()">Delete All</button>
+            </div>
+
+            <!-- Single Select Actions -->
+            <div id="singleActions" style="display:none;">
+                <label style="font-size:0.7rem; color:#64748b">Name</label>
+                <input type="text" id="editNodeName" onchange="updateNodeName()">
+                
+                <label style="font-size:0.7rem; color:#64748b">Signature</label>
+                <textarea id="editNodeSig" rows="5"></textarea>
+                
+                <div style="display:flex; gap:5px; margin-top:8px;">
+                    <button class="btn-success" onclick="saveNodeSig()">Update</button>
+                    <button class="btn-primary" onclick="saveToLibrary()">💾 Save</button>
+                </div>
+                <button class="btn-danger" style="margin-top:5px;" onclick="deleteSelection()">Delete</button>
+            </div>
+        </div>
+        
+        <div id="emptySelectionHint" style="text-align:center; color:var(--text-secondary); font-size:0.8rem; margin-top:20px;">
+            Select nodes to Edit or Merge
+        </div>
+    </div>
+
+    <!-- CENTER: Canvas -->
+    <div class="column" style="padding: 10px 0;">
+        <div class="graph-area" id="canvasContainer">
+            <div id="selectionBox"></div> <!-- Drag selection visual -->
+            <div class="toolbar-overlay">
+                <button class="btn-icon" onclick="togglePhysics()" id="physicsBtn">Physics: ON</button>
+                <button class="btn-icon" onclick="clearGraph()">Clear</button>
+            </div>
+            <canvas id="mainCanvas"></canvas>
+        </div>
+        <div style="padding: 0 10px;">
+            <button class="btn-success" style="padding: 12px; font-size:0.9rem;" onclick="calculateGadget()">
+                ⚡ Compute Whole Graph
+            </button>
+        </div>
+    </div>
+
+    <!-- RIGHT: Library & Config -->
+    <div class="column">
+        
+        <!-- 1. Function Library -->
+        <div class="card" style="flex-grow: 1; max-height: 40%;">
+            <div class="card-title">
+                Function Library
+                <button class="btn-icon" onclick="clearLibrary()" title="Clear Library">🗑️</button>
+            </div>
+            <div id="libraryList" style="overflow-y:auto; display:flex; flex-direction:column; gap:5px; flex-grow:1;">
+                <!-- Library items go here -->
+                <div style="font-size:0.75rem; color:#64748b; text-align:center; padding:10px;">Library is empty</div>
+            </div>
+        </div>
+
+        <!-- 2. Holographic Basis -->
+        <div class="card">
+            <div class="card-title">Holographic Basis</div>
+            <select id="presetSelect" onchange="applyPreset()">
+                <option value="none">Identity (Standard)</option>
+                <option value="Z">Z-Basis (1,1; i,-i)</option>
+                <option value="H">Hadamard (1,1; 1,-1)</option>
+            </select>
+            <div class="matrix-grid">
+                <input type="text" class="matrix-input" id="m00" placeholder="1">
+                <input type="text" class="matrix-input" id="m01" placeholder="0">
+                <input type="text" class="matrix-input" id="m10" placeholder="0">
+                <input type="text" class="matrix-input" id="m11" placeholder="1">
+            </div>
+        </div>
+
+        <!-- 3. Result -->
+        <div class="card">
+            <div class="card-title">Results</div>
+            <div id="result-box" class="result-box">Ready...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Global State ---
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasContainer');
+
+    let nodes = [];
+    let edges = [];
+    let nodeIdCounter = 0;
+
+    // Selection State
+    let selection = new Set(); // Set of Node Objects
+    let isDraggingSelection = false;
+    let dragStartPos = {x:0, y:0}; // For box selection
+
+    // Interaction State
+    let draggingNode = null;
+    let wiringStart = null; 
+    let currentMouse = {x: 0, y: 0};
+    let physicsEnabled = true;
+    
+    // Constants
+    const NODE_RADIUS = 24;
+    const PORT_RADIUS = 5;
+
+    // --- Initialization ---
+    function resize() {
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    
+    // Library Init
+    let functionLibrary = JSON.parse(localStorage.getItem('holant_lib') || '[]');
+    renderLibrary();
+
+    // --- Node Class ---
+    class Node {
+        constructor(x, y, name, arity, signature = null) {
+            this.id = nodeIdCounter++;
+            this.x = x;
+            this.y = y;
+            this.vx = 0; this.vy = 0;
+            this.name = name;
+            this.arity = parseInt(arity);
+            
+            if(signature) {
+                this.signature = signature;
+            } else {
+                // Default Equality
+                let size = Math.pow(2, this.arity);
+                this.signature = new Array(size).fill(0);
+                if(size>0) { this.signature[0]=1; this.signature[size-1]=1; }
+            }
+        }
+
+        updatePhysics() {
+            if (!physicsEnabled || selection.has(this)) return;
+            this.vx *= 0.85; this.vy *= 0.85;
+            this.x += this.vx; this.y += this.vy;
+            
+            // Bounds
+            if(this.x < 30) this.vx+=1;
+            if(this.x > canvas.width-30) this.vx-=1;
+            if(this.y < 30) this.vy+=1;
+            if(this.y > canvas.height-30) this.vy-=1;
+        }
+    }
+
+    // --- Physics ---
+    function applyForces() {
+        if (!physicsEnabled) return;
+        for (let i=0; i<nodes.length; i++) {
+            for (let j=i+1; j<nodes.length; j++) {
+                let n1=nodes[i], n2=nodes[j];
+                let dx = n1.x-n2.x, dy = n1.y-n2.y;
+                let distSq = dx*dx+dy*dy;
+                if(distSq<1) distSq=1;
+                let force = 5000 / distSq;
+                let fx = (dx/Math.sqrt(distSq))*force, fy = (dy/Math.sqrt(distSq))*force;
+                if(!selection.has(n1)) { n1.vx+=fx; n1.vy+=fy; }
+                if(!selection.has(n2)) { n2.vx-=fx; n2.vy-=fy; }
+            }
+        }
+        edges.forEach(e => {
+            let n1 = nodes.find(n=>n.id===e.source), n2 = nodes.find(n=>n.id===e.target);
+            if(n1 && n2) {
+                let p1 = getPortPos(n1, e.sourceHandle), p2 = getPortPos(n2, e.targetHandle);
+                let dx = p1.x-p2.x, dy = p1.y-p2.y;
+                let dist = Math.sqrt(dx*dx+dy*dy);
+                let force = (dist-100) * 0.005;
+                let fx = (dx/dist)*force, fy = (dy/dist)*force;
+                if(!selection.has(n1)) { n1.vx-=fx; n1.vy-=fy; }
+                if(!selection.has(n2)) { n2.vx+=fx; n2.vy+=fy; }
+            }
+        });
+    }
+
+    function animate() {
+        applyForces();
+        nodes.forEach(n => n.updatePhysics());
+        draw();
+        requestAnimationFrame(animate);
+    }
+
+    // --- Drawing ---
+    function getPortPos(node, index) {
+        const angle = (2 * Math.PI / node.arity) * index - Math.PI/2;
+        return {
+            x: node.x + Math.cos(angle) * NODE_RADIUS,
+            y: node.y + Math.sin(angle) * NODE_RADIUS,
+            angle: angle
+        };
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Edges
+        ctx.lineWidth = 2;
+        edges.forEach(e => {
+            let n1 = nodes.find(n=>n.id===e.source), n2 = nodes.find(n=>n.id===e.target);
+            if(n1 && n2) {
+                let p1 = getPortPos(n1, e.sourceHandle), p2 = getPortPos(n2, e.targetHandle);
+                
+                // Highlight edges that are fully internal to selection
+                let isSelectedEdge = selection.has(n1) && selection.has(n2);
+                
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                let cp1 = { x: p1.x + Math.cos(p1.angle)*50, y: p1.y + Math.sin(p1.angle)*50 };
+                let cp2 = { x: p2.x + Math.cos(p2.angle)*50, y: p2.y + Math.sin(p2.angle)*50 };
+                
+                ctx.strokeStyle = isSelectedEdge ? '#f59e0b' : '#64748b';
+                ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
+                ctx.stroke();
+            }
+        });
+
+        // Wiring Drag
+        if(wiringStart) {
+            ctx.strokeStyle = '#f59e0b'; ctx.setLineDash([5,5]); ctx.beginPath();
+            ctx.moveTo(wiringStart.x, wiringStart.y);
+            ctx.lineTo(currentMouse.x, currentMouse.y);
+            ctx.stroke(); ctx.setLineDash([]);
+        }
+
+        // Nodes
+        nodes.forEach(n => {
+            const isSel = selection.has(n);
+            
+            // Glow
+            if(isSel) {
+                ctx.shadowBlur = 15; ctx.shadowColor = "rgba(59, 130, 246, 0.8)";
+            } else {
+                ctx.shadowBlur = 0;
+            }
+
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, NODE_RADIUS, 0, Math.PI*2);
+            ctx.fillStyle = isSel ? '#1e293b' : '#0f172a';
+            ctx.fill();
+            ctx.strokeStyle = isSel ? '#3b82f6' : '#475569';
+            ctx.lineWidth = isSel ? 2 : 1.5;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Text
+            ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(n.name, n.x, n.y);
+
+            // Ports
+            for(let i=0; i<n.arity; i++) {
+                let p = getPortPos(n, i);
+                let connected = edges.some(e=>(e.source===n.id && e.sourceHandle===i) || (e.target===n.id && e.targetHandle===i));
+                ctx.beginPath(); ctx.arc(p.x, p.y, PORT_RADIUS, 0, Math.PI*2);
+                ctx.fillStyle = connected ? '#10b981' : '#ef4444';
+                ctx.fill();
+                
+                if(isSel || !connected) {
+                    ctx.fillStyle = connected ? '#10b981' : '#ef4444';
+                    ctx.font = '9px sans-serif';
+                    let tx = p.x + Math.cos(p.angle)*10, ty = p.y + Math.sin(p.angle)*10;
+                    ctx.fillText(i, tx, ty);
+                }
+            }
+        });
+    }
+
+    // --- Interaction ---
+    
+    // Box Selection Logic
+    container.addEventListener('mousedown', e => {
+        if(e.target !== canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // 1. Hit Port?
+        let hitP = getHitPort(x, y);
+        if(hitP) {
+            // Start wiring
+            removeEdgesOnPort(hitP.node.id, hitP.portIndex);
+            wiringStart = hitP;
+            return;
+        }
+
+        // 2. Hit Node?
+        let hitN = getHitNode(x, y);
+        if(hitN) {
+            if(e.shiftKey) {
+                // Toggle Selection
+                if(selection.has(hitN)) selection.delete(hitN);
+                else selection.add(hitN);
+            } else {
+                // If clicking an unselected node without shift, select only it
+                // If clicking a selected node, dragging logic starts (handled in mousemove)
+                if(!selection.has(hitN)) {
+                    selection.clear();
+                    selection.add(hitN);
+                }
+            }
+            draggingNode = hitN; // Primary drag handle
+            updateSelectionPanel();
+            return;
+        }
+
+        // 3. Hit Background (Box Select)
+        if(!e.shiftKey) selection.clear(); // Clear if simple click
+        isDraggingSelection = true;
+        dragStartPos = {x, y};
+        const box = document.getElementById('selectionBox');
+        box.style.left = x + 'px'; box.style.top = y + 'px';
+        box.style.width = '0px'; box.style.height = '0px';
+        box.style.display = 'block';
+        updateSelectionPanel();
+    });
+
+    window.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        currentMouse = {x, y};
+
+        // Box Selecting
+        if(isDraggingSelection) {
+            const box = document.getElementById('selectionBox');
+            const minX = Math.min(x, dragStartPos.x);
+            const minY = Math.min(y, dragStartPos.y);
+            const w = Math.abs(x - dragStartPos.x);
+            const h = Math.abs(y - dragStartPos.y);
+            box.style.left = minX + 'px'; box.style.top = minY + 'px';
+            box.style.width = w + 'px'; box.style.height = h + 'px';
+            
+            // Live update selection
+            nodes.forEach(n => {
+                if(n.x > minX && n.x < minX+w && n.y > minY && n.y < minY+h) {
+                    selection.add(n);
+                } else if (!e.shiftKey) {
+                     // If not shift adding, maybe deselect? Complex logic, let's keep simple:
+                     // Only add to selection in box
+                }
+            });
+            return;
+        }
+
+        // Node Dragging
+        if(draggingNode && selection.size > 0) {
+            // Move all selected nodes together
+            // Calculate delta
+            // This is rough for physics, simple translation for now
+            if(selection.has(draggingNode)) {
+                // If we are dragging a member of the group
+                // We need relative movement, but here just update pos
+                draggingNode.x = x; draggingNode.y = y;
+                draggingNode.vx = 0; draggingNode.vy = 0;
+                // Others follow? Implementing group drag is tricky with physics
+                // Let's just let physics pull them or disable physics for group
+                selection.forEach(n => {
+                    n.vx = 0; n.vy = 0; // Stop them
+                });
+            }
+        }
+    });
+
+    window.addEventListener('mouseup', e => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Finish Box Select
+        if(isDraggingSelection) {
+            isDraggingSelection = false;
+            document.getElementById('selectionBox').style.display = 'none';
+            updateSelectionPanel();
+        }
+
+        // Finish Wiring
+        if(wiringStart) {
+            let hitP = getHitPort(x, y);
+            if(hitP && hitP.node !== wiringStart.node) {
+                removeEdgesOnPort(hitP.node.id, hitP.portIndex);
+                edges.push({
+                    source: wiringStart.node.id, sourceHandle: wiringStart.portIndex,
+                    target: hitP.node.id, targetHandle: hitP.portIndex
+                });
+            }
+            wiringStart = null;
+        }
+        draggingNode = null;
+    });
+
+    // --- Core Logic Functions ---
+
+    function addNode(name, arity, sig) {
+        const nName = name || document.getElementById('newNodeName').value || "f";
+        const nArity = arity || document.getElementById('newNodeArity').value || 3;
+        
+        const x = canvas.width/2 + (Math.random()*60 - 30);
+        const y = canvas.height/2 + (Math.random()*60 - 30);
+        
+        const n = new Node(x, y, nName, nArity, sig);
+        nodes.push(n);
+    }
+
+    function deleteSelection() {
+        selection.forEach(n => {
+            nodes = nodes.filter(x => x.id !== n.id);
+            edges = edges.filter(e => e.source !== n.id && e.target !== n.id);
+        });
+        selection.clear();
+        updateSelectionPanel();
+    }
+
+    function updateSelectionPanel() {
+        const count = selection.size;
+        const panel = document.getElementById('selectionPanel');
+        const multi = document.getElementById('multiActions');
+        const single = document.getElementById('singleActions');
+        const hint = document.getElementById('emptySelectionHint');
+        const countSpan = document.getElementById('selectionCount');
+
+        countSpan.innerText = count;
+
+        if(count === 0) {
+            panel.style.display = 'none';
+            hint.style.display = 'block';
+        } else {
+            panel.style.display = 'flex';
+            hint.style.display = 'none';
+            if(count === 1) {
+                multi.style.display = 'none';
+                single.style.display = 'block';
+                // Load single node data
+                const n = selection.values().next().value;
+                document.getElementById('editNodeName').value = n.name;
+                let sigStr = JSON.stringify(n.signature);
+                document.getElementById('editNodeSig').value = sigStr.replace(/"/g, "'");
+            } else {
+                single.style.display = 'none';
+                multi.style.display = 'block';
+            }
+        }
+    }
+
+    // --- MERGE LOGIC (THE BIG ONE) ---
+    async function mergeSelection() {
+        if(selection.size < 2) return;
+
+        const subNodes = Array.from(selection);
+        const subNodeIds = new Set(subNodes.map(n => n.id));
+        
+        // 1. Identify Edges
+        const internalEdges = [];
+        const externalEdges = []; // { edge, connectedToSelectedNode: 'source' or 'target' }
+
+        edges.forEach(e => {
+            const sIn = subNodeIds.has(e.source);
+            const tIn = subNodeIds.has(e.target);
+
+            if(sIn && tIn) {
+                internalEdges.push(e);
+            } else if (sIn && !tIn) {
+                externalEdges.push({ edge: e, myNodeId: e.source, myPort: e.sourceHandle, otherNodeId: e.target, otherPort: e.targetHandle });
+            } else if (!sIn && tIn) {
+                externalEdges.push({ edge: e, myNodeId: e.target, myPort: e.targetHandle, otherNodeId: e.source, otherPort: e.sourceHandle });
+            }
+        });
+
+        // 2. Prepare Payload for Backend
+        // Note: The backend returns variables in the order it processes "dangling" ports.
+        // We must match that order to reconnect wires.
+        // The backend logic: iterates nodes in order, then ports 0..k. If not connected internally, it's a variable.
+        
+        // Let's predict the order:
+        const predictedOrder = [];
+        subNodes.forEach(n => {
+            for(let i=0; i<n.arity; i++) {
+                // Is this port connected internally?
+                const isInternal = internalEdges.some(e => 
+                    (e.source === n.id && e.sourceHandle === i) || 
+                    (e.target === n.id && e.targetHandle === i)
+                );
+                
+                if(!isInternal) {
+                    // This is a port that will become a port on the new merged node
+                    // Check if it's connected externally or just truly empty
+                    const extConn = externalEdges.find(item => item.myNodeId === n.id && item.myPort === i);
+                    predictedOrder.push({
+                        oldNode: n,
+                        oldPort: i,
+                        externalConnection: extConn // might be undefined if open
+                    });
+                }
+            }
+        });
+
+        // 3. Call API
+        const btn = document.querySelector('#multiActions button');
+        const origText = btn.innerText;
+        btn.innerText = "Computing...";
+        
+        try {
+            // We only send internal edges. The backend treats anything else as dangling.
+            // We must respect current transformation matrix for the merge to "bake in" the transform?
+            // Let's ask user? Or default to Identity for merge (pure contraction)?
+            // Usually merging implies contracting the graph structure. Let's use Identity transform for the merge calculation itself
+            // unless the user wants to pre-apply the Z-basis into the new node.
+            // Let's use the current UI transform setting!
+            
+            const transform = getMatrixStr(); 
+
+            const resp = await fetch('/calculate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    nodes: subNodes,
+                    edges: internalEdges,
+                    transform: transform // Bake the transform into the new node!
+                })
+            });
+            
+            const data = await resp.json();
+            
+            if(data.status === 'success') {
+                // 4. Create New Node
+                const newSig = data.result.signature; // Array of strings
+                const newArity = predictedOrder.length;
+                
+                // Avg Position
+                let ax=0, ay=0;
+                subNodes.forEach(n=>{ax+=n.x; ay+=n.y});
+                ax /= subNodes.length; ay /= subNodes.length;
+
+                const newNode = new Node(ax, ay, "Merged", newArity, newSig);
+                nodes.push(newNode);
+
+                // 5. Reconnect External Edges
+                // predictedOrder[i] corresponds to newNode port i
+                predictedOrder.forEach((info, newPortIndex) => {
+                    if(info.externalConnection) {
+                        const ext = info.externalConnection;
+                        // Connect newNode:newPortIndex <-> ext.otherNodeId:ext.otherPort
+                        edges.push({
+                            source: newNode.id, sourceHandle: newPortIndex,
+                            target: ext.otherNodeId, targetHandle: ext.otherPort
+                        });
+                    }
+                });
+
+                // 6. Cleanup
+                // Remove old nodes
+                subNodes.forEach(n => {
+                    nodes = nodes.filter(x => x.id !== n.id);
+                });
+                // Remove old edges (internal and external attached to old)
+                const oldIds = new Set(subNodes.map(n=>n.id));
+                edges = edges.filter(e => !oldIds.has(e.source) && !oldIds.has(e.target));
+
+                selection.clear();
+                selection.add(newNode);
+                updateSelectionPanel();
+                
+            } else {
+                alert("Merge failed: " + data.message);
+            }
+
+        } catch(e) {
+            alert("Network error: " + e);
+        } finally {
+            btn.innerText = origText;
+        }
+    }
+
+    // --- Library System ---
+    
+    function renderLibrary() {
+        const list = document.getElementById('libraryList');
+        list.innerHTML = "";
+        
+        if(functionLibrary.length === 0) {
+            list.innerHTML = '<div style="font-size:0.75rem; color:#64748b; text-align:center; padding:10px;">Library is empty</div>';
+            return;
+        }
+
+        functionLibrary.forEach((item, index) => {
+            const el = document.createElement('div');
+            el.className = 'lib-item';
+            el.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; color:#f1f5f9;">${item.name}</div>
+                    <div style="font-size:0.65rem; color:#64748b;">Arity: ${item.arity}</div>
+                </div>
+                <div class="lib-actions">
+                    <button class="btn-icon" onclick="loadFromLibrary(${index})" title="Add to Graph">➕</button>
+                    <button class="btn-icon" style="color:#ef4444" onclick="removeFromLibrary(${index})" title="Delete">✕</button>
+                </div>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    function saveToLibrary() {
+        if(selection.size !== 1) return;
+        const n = selection.values().next().value;
+        
+        const name = prompt("Name this function:", n.name);
+        if(!name) return;
+
+        const item = {
+            name: name,
+            arity: n.arity,
+            signature: n.signature
+        };
+        
+        functionLibrary.push(item);
+        localStorage.setItem('holant_lib', JSON.stringify(functionLibrary));
+        renderLibrary();
+    }
+
+    function loadFromLibrary(index) {
+        const item = functionLibrary[index];
+        addNode(item.name, item.arity, item.signature);
+    }
+
+    function removeFromLibrary(index) {
+        if(confirm("Delete this template?")) {
+            functionLibrary.splice(index, 1);
+            localStorage.setItem('holant_lib', JSON.stringify(functionLibrary));
+            renderLibrary();
+        }
+    }
+
+    function clearLibrary() {
+        if(confirm("Clear entire library?")) {
+            functionLibrary = [];
+            localStorage.setItem('holant_lib', '[]');
+            renderLibrary();
+        }
+    }
+
+    // --- Standard Helpers ---
+    function updateNodeName() {
+        if(selection.size === 1) {
+            const n = selection.values().next().value;
+            n.name = document.getElementById('editNodeName').value;
+        }
+    }
+
+    function saveNodeSig() {
+        if(selection.size !== 1) return;
+        const n = selection.values().next().value;
+        try {
+            let val = document.getElementById('editNodeSig').value.replace(/'/g, '"');
+            let arr = val.replace(/[\[\]\n]/g, '').split(',').map(s=>s.trim()).filter(s=>s!=='');
+            if(arr.length !== Math.pow(2, n.arity)) throw new Error("Size mismatch");
+            n.signature = arr;
+            alert("Updated");
+        } catch(e) { alert(e.message); }
+    }
+
+    function getHitPort(x, y) {
+        for(let n of nodes) {
+            for(let i=0; i<n.arity; i++) {
+                let p = getPortPos(n, i);
+                if(Math.hypot(x-p.x, y-p.y) < 12) return {node:n, portIndex:i, x:p.x, y:p.y};
+            }
+        }
+        return null;
+    }
+    function getHitNode(x, y) {
+        for(let i=nodes.length-1; i>=0; i--) {
+            if(Math.hypot(x-nodes[i].x, y-nodes[i].y) < NODE_RADIUS) return nodes[i];
+        }
+        return null;
+    }
+    function removeEdgesOnPort(nid, pid) {
+        edges = edges.filter(e => !((e.source===nid && e.sourceHandle===pid) || (e.target===nid && e.targetHandle===pid)));
+    }
+    
+    async function calculateGadget() {
+        document.getElementById('result-box').innerText = "Computing...";
+        try {
+            const resp = await fetch('/calculate', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({nodes, edges, transform: getMatrixStr()})
+            });
+            const data = await resp.json();
+            document.getElementById('result-box').innerText = data.status==='success' 
+                ? "Sig: " + JSON.stringify(data.result.signature) 
+                : "Error: " + data.message;
+        } catch(e) { document.getElementById('result-box').innerText = "Error"; }
+    }
+
+    function getMatrixStr() {
+        const m00 = document.getElementById('m00').value||"1";
+        const m01 = document.getElementById('m01').value||"0";
+        const m10 = document.getElementById('m10').value||"0";
+        const m11 = document.getElementById('m11').value||"1";
+        const v = document.getElementById('presetSelect').value;
+        if(v!=='none') return ''; // If preset selected, maybe let backend handle or fill inputs? 
+        // Current logic: inputs override if typed? Let's stick to inputs.
+        return `[[${m00},${m01}],[${m10},${m11}]]`;
+    }
+
+    function applyPreset() {
+        const v = document.getElementById('presetSelect').value;
+        if(v==='Z') setM('1','1','i','-i');
+        if(v==='H') setM('1','1','1','-1');
+        if(v==='none') setM('1','0','0','1');
+    }
+    function setM(a,b,c,d) {
+        document.getElementById('m00').value=a; document.getElementById('m01').value=b;
+        document.getElementById('m10').value=c; document.getElementById('m11').value=d;
+    }
+    function clearGraph() { if(confirm("Clear all?")) { nodes=[]; edges=[]; selection.clear(); updateSelectionPanel(); } }
+    function togglePhysics() { physicsEnabled=!physicsEnabled; document.getElementById('physicsBtn').innerText = physicsEnabled?"Physics: ON":"Physics: OFF"; }
+
+    // Init
+    resize();
+    animate();
+    // Demo
+    addNode("EQ", 3); 
+    
+</script>
+</body>
+</html>
